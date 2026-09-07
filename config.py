@@ -14,6 +14,11 @@ def _b(key: str, default: str = "false") -> bool:
 # --- Google ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 TEXT_MODEL = os.getenv("TEXT_MODEL", "gemini-3.5-flash")
+# asosiy model band bo'lsa (503) shu ro'yxat bo'ylab o'tadi
+TEXT_MODEL_FALLBACKS = [m.strip() for m in os.getenv(
+    "TEXT_MODEL_FALLBACKS",
+    "gemini-3.6-flash,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-3-flash-preview"
+).split(",") if m.strip()]
 IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gemini-3.1-flash-image")  # Nano Banana 2
 IMAGE_MODEL_FALLBACK = os.getenv("IMAGE_MODEL_FALLBACK", "gemini-2.5-flash-image")
 
@@ -25,8 +30,11 @@ IMAGE_SIZE = os.getenv("IMAGE_SIZE", "2K")   # 1K | 2K | 4K (faqat gemini)
 
 # --- Rasm sifatini oshirish (past o'lchamli tekin rasmlar uchun) ---
 SHARPEN = float(os.getenv("SHARPEN", "0.9"))      # 0 = o'chirilgan
-GRAIN = float(os.getenv("GRAIN", "6"))            # kino donadorligi, 0 = yo'q
-VIGNETTE = _b("VIGNETTE", "true")
+GRAIN = float(os.getenv("GRAIN", "3"))            # kino donadorligi, 0 = yo'q
+VIGNETTE = _b("VIGNETTE", "false")     # quvnoq uslubda kerak emas
+SATURATION = float(os.getenv("SATURATION", "1.18"))
+BRIGHTNESS = float(os.getenv("BRIGHTNESS", "0.02"))
+CONTRAST = float(os.getenv("CONTRAST", "1.04"))
 ZOOM_AMP = float(os.getenv("ZOOM_AMP", "0.10"))   # Ken Burns kuchi
 
 # --- Telegram ---
@@ -60,7 +68,14 @@ VOICE = os.getenv("VOICE", "en-US-AndrewMultilingualNeural")
 SCENES = int(os.getenv("SCENES", "6"))
 IMAGE_STYLE = os.getenv(
     "IMAGE_STYLE",
-    "cinematic photoreal, dramatic lighting, rich colors, 35mm film grain, highly detailed",
+    "bright cinematic photoreal, vivid saturated colours, clean daylight, crisp detail, playful",
+)
+
+# Umumiy kayfiyat — Agent 1 promtlarni shu ruhda yozadi
+MOOD = os.getenv("MOOD", "").strip() or (
+    "Bright, colourful, cheerful and full of wonder. Sunny daylight or vivid colourful "
+    "light, saturated happy colours, clean crisp air, lively energy. It should feel like "
+    "a fun popular-science channel, never like a horror film."
 )
 
 # --- Video ---

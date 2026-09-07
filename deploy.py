@@ -124,7 +124,7 @@ ASK = {
 def ask_missing(secrets: dict) -> dict:
     """Yetishmayotgan kalitlarni so'raydi va .env ga saqlaydi."""
     need = [k for k in ("GEMINI_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
-            if not secrets.get(k)]
+            if is_placeholder(secrets.get(k, ""))]
     if not need:
         return secrets
 
@@ -176,6 +176,18 @@ MIGRATE = {
     "POLLI_MODEL": {"flux": "sana"},          # flux tekin rejadan olib tashlangan
     "IMAGE_MODEL": {"gemini-3.1-flash-image-preview": "gemini-3.1-flash-image"},
 }
+
+
+# .env.example dagi andoza qiymatlar — bularni HECH QACHON Secrets'ga yozmaymiz
+PLACEHOLDERS = {
+    "@mening_kanalim", "AIza...", "ghp_...", "123456:AA...",
+    "client_secret.json", "youtube_token.json", "",
+}
+
+
+def is_placeholder(v: str) -> bool:
+    v = (v or "").strip()
+    return (not v) or v in PLACEHOLDERS or v.endswith("...") or v.startswith("...")
 
 
 def read_env() -> dict:
@@ -241,6 +253,10 @@ def main() -> None:
         "TELEGRAM_CHAT_ID": config.TELEGRAM_CHAT_ID,
         **yt_creds(),
     }
+    # andoza qiymatlar GitHub'dagi haqiqiy kalitlarni bosib ketmasin
+    for k, v in list(secrets.items()):
+        if is_placeholder(v):
+            secrets[k] = ""
     secrets = ask_missing(secrets)
 
     # 1. repo
@@ -279,7 +295,8 @@ def main() -> None:
     print("\n▶ Secrets…")
     pk = api("GET", f"/repos/{full}/actions/secrets/public-key", token)
     for k, v in secrets.items():
-        if not v:
+        if is_placeholder(v):
+            print(f"    – {k}: to'ldirilmagan, GitHub'dagisi saqlanadi")
             continue
         api("PUT", f"/repos/{full}/actions/secrets/{k}", token,
             {"encrypted_value": encrypt(pk["key"], v), "key_id": pk["key_id"]})

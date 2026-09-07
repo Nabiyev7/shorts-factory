@@ -97,9 +97,15 @@ def main() -> None:
             else:
                 print(f"\n✅ {r['video']}")
             ok += 1
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
             traceback.print_exc()
             print("❌ Bu video o'tkazib yuborildi, keyingisiga o'tildi")
+            try:                       # xatodan xabar bering
+                from core import telegram
+                telegram.send_message(
+                    f"❌ <b>Video yasalmadi</b>\n<code>{str(e)[:400]}</code>")
+            except Exception:  # noqa: BLE001
+                pass
     print(f"\nYakun: {ok}/{a.count} tayyor. Papka: {config.OUTPUT_DIR}")
 
 

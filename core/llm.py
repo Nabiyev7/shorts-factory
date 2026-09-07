@@ -1,5 +1,9 @@
-"""Gemini text — JSON qaytaruvchi yordamchi."""
+"""Gemini text — JSON qaytaruvchi yordamchi.
+
+Model band bo'lsa (503) yoki limit tugasa (429) — kutadi va boshqa modelga o'tadi.
+"""
 import json
+import random
 import time
 
 from google import genai
@@ -19,23 +23,57 @@ def client() -> genai.Client:
     return _client
 
 
-def json_call(prompt: str, schema: dict, *, temperature: float = 1.0, retries: int = 3) -> dict:
-    """Modeldan qat'iy JSON oladi (response_schema bilan)."""
+def _models() -> list[str]:
+    """Asosiy model + zaxiralar (takrorlanmagan holda)."""
+    out, seen = [], set()
+    for m in [config.TEXT_MODEL, *config.TEXT_MODEL_FALLBACKS]:
+        m = (m or "").strip()
+        if m and m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
+
+
+def _retryable(err: Exception) -> bool:
+    t = str(err)
+    return any(x in t for x in ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED",
+                                "500", "INTERNAL", "504", "DEADLINE"))
+
+
+def json_call(prompt: str, schema: dict, *, temperature: float = 1.0,
+              rounds: int = 4) -> dict:
+    """Modeldan qat'iy JSON oladi. Har raundda barcha modellar sinab ko'riladi."""
+    models = _models()
     last = None
-    for attempt in range(retries):
-        try:
-            r = client().models.generate_content(
-                model=config.TEXT_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=temperature,
-                    response_mime_type="application/json",
-                    response_schema=schema,
-                ),
-            )
-            return json.loads(r.text)
-        except Exception as e:  # noqa: BLE001
-            last = e
-            print(f"  ! llm urinish {attempt + 1}/{retries} xato: {e}")
-            time.sleep(2 * (attempt + 1))
+
+    for rnd in range(rounds):
+        for model in models:
+            try:
+                r = client().models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=temperature,
+                        response_mime_type="application/json",
+                        response_schema=schema,
+                    ),
+                )
+                if rnd or model != models[0]:
+                    print(f"  ✓ {model} bilan ishladi")
+                return json.loads(r.text)
+            except Exception as e:  # noqa: BLE001
+                last = e
+                short = str(e)[:120].replace("\n", " ")
+                print(f"  ! {model}: {short}")
+                if not _retryable(e):
+                    # kalit xato / promt xato — boshqa modelda ham shu bo'ladi
+                    if "API_KEY" in str(e) or "INVALID_ARGUMENT" in str(e):
+                        raise RuntimeError(f"Gemini text ishlamadi: {e}") from None
+                time.sleep(1.5)
+
+        wait = min(60, 8 * (2 ** rnd)) + random.uniform(0, 4)
+        if rnd < rounds - 1:
+            print(f"  … hamma model band, {wait:.0f}s kutilmoqda (raund {rnd + 2}/{rounds})")
+            time.sleep(wait)
+
     raise RuntimeError(f"Gemini text ishlamadi: {last}")

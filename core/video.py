@@ -92,11 +92,12 @@ def build(images: list[Path], durations: list[float], voice: Path,
 
     total = sum(durations) + xf
 
-    grade = []
+    grade = [f"eq=saturation={config.SATURATION}:brightness={config.BRIGHTNESS}"
+             f":contrast={config.CONTRAST}"]
     if config.GRAIN > 0:
         grade.append(f"noise=alls={int(config.GRAIN)}:allf=t+u")
     if config.VIGNETTE:
-        grade.append("vignette=PI/5")
+        grade.append("vignette=PI/6")
     if grade:
         filters.append(f"[{vlabel}]" + ",".join(grade) + "[vg]")
         vlabel = "vg"
@@ -182,9 +183,12 @@ def build_from_clips(clips: list[Path], durations: list[float], voice: Path,
 
     total = sum(durations) + xf
 
+    grade = [f"eq=saturation={config.SATURATION}:brightness={config.BRIGHTNESS}"
+             f":contrast={config.CONTRAST}"]
     if config.VIGNETTE:
-        filters.append(f"[{vlabel}]vignette=PI/6[vg]")
-        vlabel = "vg"
+        grade.append("vignette=PI/6")
+    filters.append(f"[{vlabel}]" + ",".join(grade) + "[vg]")
+    vlabel = "vg"
 
     ass_path = str(ass).replace("\\", "/").replace(":", r"\:")
     filters.append(f"[{vlabel}]subtitles='{ass_path}'[vout]")

@@ -17,7 +17,10 @@ import config
 POLLI = "https://image.pollinations.ai/prompt/{p}"
 
 NEGATIVE = ("no text, no letters, no numbers, no captions, no subtitles, no watermark, "
-            "no logo, no signage, no borders, no frames, no split screen, no collage")
+            "no logo, no signage, no borders, no frames, no split screen, no collage, "
+            "not dark, not gloomy, no fog, no haze, no smoke, no blood, no gore, "
+            "no corpses, no decay, no horror, not creepy, not eerie, not desaturated, "
+            "not muted, not monochrome, not sepia")
 
 
 def build_prompt(scene: dict, style: dict | None) -> str:
@@ -39,7 +42,8 @@ def build_prompt(scene: dict, style: dict | None) -> str:
         parts.append(f"Visual style: {config.IMAGE_STYLE}.")
 
     parts.append("Vertical 9:16 composition, subject in the upper two-thirds, "
-                 "lower third visually calm and uncluttered.")
+                 "lower third visually calm and uncluttered. "
+                 "Bright, colourful, cheerful, well-lit, high saturation.")
     parts.append(NEGATIVE + ".")
     return " ".join(parts)
 

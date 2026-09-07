@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
+      PYTHONUNBUFFERED: "1"
       GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
       TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID:      ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -42,13 +43,17 @@ jobs:
       SCENES: ${{ vars.SCENES || '6' }}
       LANG: "en"
       TEXT_MODEL: ${{ vars.TEXT_MODEL || 'gemini-3.5-flash' }}
+      TEXT_MODEL_FALLBACKS: ${{ vars.TEXT_MODEL_FALLBACKS || 'gemini-3.6-flash,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-3-flash-preview' }}
       IMAGE_MODEL: ${{ vars.IMAGE_MODEL || 'gemini-3.1-flash-image' }}
       IMAGE_SIZE: ${{ vars.IMAGE_SIZE || '2K' }}
       IMAGE_PROVIDER: ${{ vars.IMAGE_PROVIDER || 'pollinations' }}
       POLLI_MODEL: ${{ vars.POLLI_MODEL || 'sana' }}
       SHARPEN: ${{ vars.SHARPEN || '0.9' }}
-      GRAIN: ${{ vars.GRAIN || '6' }}
+      GRAIN: ${{ vars.GRAIN || '3' }}
       ZOOM_AMP: ${{ vars.ZOOM_AMP || '0.10' }}
+      VIGNETTE: ${{ vars.VIGNETTE || 'false' }}
+      SATURATION: ${{ vars.SATURATION || '1.18' }}
+      MOOD: ${{ vars.MOOD || '' }}
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'public' }}
 
     steps:

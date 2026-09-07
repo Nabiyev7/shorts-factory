@@ -57,13 +57,18 @@ ALREADY USED — do not repeat these or anything close:
 - Scenes 2..n-1: 12-22 words each, one idea, rising tension.
 - Last scene: satisfying kicker + soft CTA ("follow for more").
 - Every claim must be FACTUALLY TRUE and verifiable. No invented numbers.
+- Pick a topic that makes people smile or say "no way!" — wonder, curiosity, clever
+  tricks, funny accidents, weird animals, surprising inventions.
+  Avoid plagues, massacres, torture, executions, disasters and disease.
 
 =====================  VISUAL DIRECTION  ====================
 First write a `style_bible` — the visual DNA every scene must obey:
-  look          one sentence: medium + rendering (e.g. "anamorphic 35mm cinema still,
-                Kodak Portra grain, shallow depth of field, photoreal")
-  palette       3-4 concrete colours (e.g. "ash grey, ember orange, deep teal shadows")
-  lighting      one dominant scheme (e.g. "low-angle firelight, hard rim, heavy haze")
+  look          one sentence: medium + rendering (e.g. "bright 35mm cinema still, clean
+                Kodak Ektar colour, crisp detail, playful, photoreal")
+  palette       3-4 bright, saturated colours (e.g. "sunflower yellow, sky blue,
+                coral pink, fresh mint" — cheerful and high-chroma, never muddy)
+  lighting      one dominant scheme, always BRIGHT (e.g. "golden hour sun, soft bounce,
+                clear air" / "midday daylight, crisp shadows" / "colourful studio lights")
   era_setting   period, place, architecture, clothing, materials
   subject_sheet if a person/creature recurs: fixed age, build, hair, clothing, distinguishing
                 marks — SAME words reused every scene so the character stays consistent.
@@ -91,11 +96,25 @@ Then, for each scene:
                   - one continuous take, no cuts, no transitions, no montage
                   - end with: "no text, no subtitles, no watermark"
 
+=====================  MOOD (VERY IMPORTANT)  ====================
+{mood}
+
+BANNED in every prompt — these make it look like horror, which is wrong:
+  darkness, gloom, shadowy figures, silhouettes in the dark, fog, mist, haze,
+  smoke, blood, gore, corpses, decay, rot, ruins, rust, cracked skin, screaming
+  faces, empty staring eyes, grimdark, desaturated, washed-out, muted, sepia,
+  monochrome, teal-and-orange, dystopian, eerie, ominous, sinister, creepy.
+Do not describe anyone as frightened, suffering, dying or in pain.
+If the topic itself is grim, show the WONDER and the CURIOSITY in it instead —
+the discovery, the colourful detail, the amazed face — never the horror.
+
 HARD RULES for BOTH image_prompt and video_prompt:
 - Vertical 9:16 framing; leave the lower third visually calm (subtitles sit there).
 - NEVER request text, letters, numbers, captions, signage, logos, watermarks or UI.
 - No real living public figures, no brand names, no copyrighted characters.
 - Concrete nouns and verbs only — no "beautiful", "amazing", "epic", "masterpiece", "8k".
+- Colour must be explicit and vivid in EVERY prompt: name at least two bright colours.
+- Light must be explicit and bright in EVERY prompt.
 - No collages, no split screens, no borders, no frames.
 
 =========================  META  ===========================
@@ -111,7 +130,8 @@ def run(scenes: int | None = None) -> dict:
     scenes = scenes or config.SCENES
     used = "\n".join(f"- {t}" for t in state.titles()) or "- (bo'sh)"
     idea = llm.json_call(
-        PROMPT.format(niche=config.NICHE, scenes=scenes, lang=config.LANG, used=used),
+        PROMPT.format(niche=config.NICHE, scenes=scenes, lang=config.LANG,
+                      used=used, mood=config.MOOD),
         SCHEMA,
         temperature=1.15,
     )
