@@ -40,6 +40,7 @@ jobs:
       HANDOFF_WAIT: ${{ vars.HANDOFF_WAIT || '120' }}
       NICHE:  ${{ vars.NICHE  || 'mind-blowing history and science facts' }}
       VOICE:  ${{ vars.VOICE  || 'en-US-AndrewMultilingualNeural' }}
+      VOICE_FALLBACKS: ${{ vars.VOICE_FALLBACKS || 'en-US-BrianMultilingualNeural,en-US-GuyNeural,en-US-ChristopherNeural,en-GB-RyanNeural' }}
       SCENES: ${{ vars.SCENES || '6' }}
       LANG: "en"
       TEXT_MODEL: ${{ vars.TEXT_MODEL || 'gemini-3.5-flash' }}

@@ -65,6 +65,11 @@ HANDOFF_WAIT = int(os.getenv("HANDOFF_WAIT", "120"))   # soniya
 NICHE = os.getenv("NICHE", "mind-blowing history and science facts")
 LANG = os.getenv("LANG", "en")
 VOICE = os.getenv("VOICE", "en-US-AndrewMultilingualNeural")
+# asosiy ovoz javob bermasa navbat bilan shular sinaladi
+VOICE_FALLBACKS = [v.strip() for v in os.getenv(
+    "VOICE_FALLBACKS",
+    "en-US-BrianMultilingualNeural,en-US-GuyNeural,en-US-ChristopherNeural,en-GB-RyanNeural"
+).split(",") if v.strip()]
 SCENES = int(os.getenv("SCENES", "6"))
 IMAGE_STYLE = os.getenv(
     "IMAGE_STYLE",

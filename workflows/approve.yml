@@ -28,6 +28,7 @@ jobs:
       YOUTUBE_ENABLED: "true"
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'public' }}
       VOICE:  ${{ vars.VOICE  || 'en-US-AndrewMultilingualNeural' }}
+      VOICE_FALLBACKS: ${{ vars.VOICE_FALLBACKS || 'en-US-BrianMultilingualNeural,en-US-GuyNeural,en-US-ChristopherNeural,en-GB-RyanNeural' }}
       SHARPEN: ${{ vars.SHARPEN || '0.9' }}
       GRAIN: ${{ vars.GRAIN || '6' }}
       ZOOM_AMP: ${{ vars.ZOOM_AMP || '0.10' }}
