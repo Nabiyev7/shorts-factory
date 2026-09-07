@@ -1,0 +1,11 @@
+.env
+.venv/
+output/
+.tmp_approve/
+client_secret.json
+youtube_token.json
+__pycache__/
+*.pyc
+
+# token bor - hech qachon repoga tushmasin
+1-GITHUBGA-YUKLASH.bat

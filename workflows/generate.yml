@@ -1,0 +1,84 @@
+name: Shorts yasash
+
+on:
+  schedule:
+    # Toshkent vaqti (UTC+5): 09:00 va 18:00
+    - cron: "0 4 * * *"
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "Nechta video"
+        default: "1"
+      scenes:
+        description: "Sahnalar soni (bo'sh = .env dagi)"
+        default: ""
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: shorts-generate
+  cancel-in-progress: false
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
+      TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID:      ${{ secrets.TELEGRAM_CHAT_ID }}
+      YOUTUBE_CLIENT_ID:     ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET_VALUE: ${{ secrets.YOUTUBE_CLIENT_SECRET_VALUE }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_ENABLED: "true"
+      APPROVAL_MODE: "true"
+      NICHE:  ${{ vars.NICHE  || 'mind-blowing history and science facts' }}
+      VOICE:  ${{ vars.VOICE  || 'en-US-AndrewMultilingualNeural' }}
+      SCENES: ${{ vars.SCENES || '6' }}
+      LANG: "en"
+      IMAGE_PROVIDER: ${{ vars.IMAGE_PROVIDER || 'pollinations' }}
+      POLLI_MODEL: ${{ vars.POLLI_MODEL || 'flux' }}
+      YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'public' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+
+      - name: Kutubxonalar
+        run: pip install -q -r requirements.txt
+
+      - name: Video yasash
+        id: make
+        run: |
+          python run.py --count "${{ inputs.count || '1' }}" \
+            ${{ inputs.scenes && format('--scenes {0}', inputs.scenes) || '' }}
+
+      - name: Videoni saqlash (tasdiqlash uchun)
+        if: steps.make.outputs.uid != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.make.outputs.artifact }}
+          path: |
+            ${{ steps.make.outputs.dir }}/*.mp4
+            ${{ steps.make.outputs.dir }}/thumb.jpg
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Holatni repoga yozish
+        run: |
+          git config user.name  "shorts-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A state/ || true
+          git diff --cached --quiet || git commit -m "state: yangi video (${{ steps.make.outputs.uid }})"
+          git pull --rebase --autostash origin ${{ github.ref_name }} || true
+          git push

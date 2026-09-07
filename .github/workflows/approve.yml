@@ -1,0 +1,62 @@
+name: Tasdiqlarni tekshirish
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # har 10 daqiqada
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: shorts-approve
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID:      ${{ secrets.TELEGRAM_CHAT_ID }}
+      YOUTUBE_CLIENT_ID:     ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET_VALUE: ${{ secrets.YOUTUBE_CLIENT_SECRET_VALUE }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_ENABLED: "true"
+      YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'public' }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kutilayotgan video bormi?
+        id: chk
+        run: |
+          n=$(ls state/pending/*.json 2>/dev/null | wc -l)
+          echo "count=$n" >> $GITHUB_OUTPUT
+          echo "Kutilmoqda: $n"
+
+      - uses: actions/setup-python@v5
+        if: steps.chk.outputs.count != '0'
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Kutubxonalar
+        if: steps.chk.outputs.count != '0'
+        run: pip install -q requests python-dotenv google-api-python-client google-auth google-auth-oauthlib
+
+      - name: Tugmalarni o'qish va yuklash
+        if: steps.chk.outputs.count != '0'
+        run: python approve.py
+
+      - name: Holatni repoga yozish
+        if: steps.chk.outputs.count != '0'
+        run: |
+          git config user.name  "shorts-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A state/ || true
+          git diff --cached --quiet || git commit -m "state: tasdiqlar qayta ishlandi"
+          git pull --rebase --autostash origin ${{ github.ref_name }} || true
+          git push
