@@ -40,10 +40,11 @@ def send_video(video: Path, caption: str, keyboard: dict | None = None) -> dict:
                      reply_markup=keyboard)
 
 
-def send_message(text: str, reply_to: int | None = None) -> dict:
+def send_message(text: str, reply_to: int | None = None,
+                 keyboard: dict | None = None) -> dict:
     return _call("sendMessage", chat_id=config.TELEGRAM_CHAT_ID,
                  text=text[:4096], parse_mode="HTML",
-                 reply_to_message_id=reply_to,
+                 reply_to_message_id=reply_to, reply_markup=keyboard,
                  link_preview_options={"is_disabled": True})
 
 
@@ -60,6 +61,52 @@ def answer_callback(cq_id: str, text: str) -> None:
         print(f"  ! answerCallbackQuery: {e}")
 
 
-def get_updates(offset: int, timeout: int = 0) -> list[dict]:
+def get_updates(offset: int, timeout: int = 0,
+                allowed: list[str] | None = None) -> list[dict]:
     return _call("getUpdates", offset=offset, timeout=timeout,
-                 allowed_updates=["callback_query"])
+                 allowed_updates=allowed or ["callback_query", "message"])
+
+
+def send_document(path: Path, caption: str = "", keyboard: dict | None = None) -> dict:
+    with open(path, "rb") as f:
+        return _call("sendDocument",
+                     files={"document": (path.name, f, "text/plain")},
+                     chat_id=config.TELEGRAM_CHAT_ID,
+                     caption=caption[:1024], parse_mode="HTML",
+                     reply_markup=keyboard)
+
+
+def edit_text(message_id: int, text: str, keyboard: dict | None = None) -> dict:
+    return _call("editMessageText", chat_id=config.TELEGRAM_CHAT_ID,
+                 message_id=message_id, text=text[:4096], parse_mode="HTML",
+                 reply_markup=keyboard,
+                 link_preview_options={"is_disabled": True})
+
+
+def get_file(file_id: str) -> str:
+    """file_id -> yuklab olish uchun to'liq URL."""
+    info = _call("getFile", file_id=file_id)
+    return (f"https://api.telegram.org/file/bot{config.TELEGRAM_BOT_TOKEN}/"
+            f"{info['file_path']}")
+
+
+def download(file_id: str, dest: Path) -> Path:
+    url = get_file(file_id)
+    r = requests.get(url, timeout=300)
+    r.raise_for_status()
+    dest.write_bytes(r.content)
+    return dest
+
+
+def handoff_keyboard(uid: str) -> dict:
+    return {"inline_keyboard": [[
+        {"text": "🎨 O'zim yasayman", "callback_data": f"mine:{uid}"},
+        {"text": "🤖 Hozir yasa", "callback_data": f"auto:{uid}"},
+    ]]}
+
+
+def build_keyboard(uid: str) -> dict:
+    return {"inline_keyboard": [[
+        {"text": "🎬 Videoni yig'", "callback_data": f"build:{uid}"},
+        {"text": "🗑 Bekor", "callback_data": f"drop:{uid}"},
+    ]]}

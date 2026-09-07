@@ -35,12 +35,20 @@ jobs:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       YOUTUBE_ENABLED: "true"
       APPROVAL_MODE: "true"
+      HANDOFF: ${{ vars.HANDOFF || 'true' }}
+      HANDOFF_WAIT: ${{ vars.HANDOFF_WAIT || '120' }}
       NICHE:  ${{ vars.NICHE  || 'mind-blowing history and science facts' }}
       VOICE:  ${{ vars.VOICE  || 'en-US-AndrewMultilingualNeural' }}
       SCENES: ${{ vars.SCENES || '6' }}
       LANG: "en"
+      TEXT_MODEL: ${{ vars.TEXT_MODEL || 'gemini-3.5-flash' }}
+      IMAGE_MODEL: ${{ vars.IMAGE_MODEL || 'gemini-3.1-flash-image' }}
+      IMAGE_SIZE: ${{ vars.IMAGE_SIZE || '2K' }}
       IMAGE_PROVIDER: ${{ vars.IMAGE_PROVIDER || 'pollinations' }}
-      POLLI_MODEL: ${{ vars.POLLI_MODEL || 'flux' }}
+      POLLI_MODEL: ${{ vars.POLLI_MODEL || 'sana' }}
+      SHARPEN: ${{ vars.SHARPEN || '0.9' }}
+      GRAIN: ${{ vars.GRAIN || '6' }}
+      ZOOM_AMP: ${{ vars.ZOOM_AMP || '0.10' }}
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'public' }}
 
     steps:

@@ -16,8 +16,9 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
+      GEMINI_API_KEY:        ${{ secrets.GEMINI_API_KEY }}
       TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID:      ${{ secrets.TELEGRAM_CHAT_ID }}
       YOUTUBE_CLIENT_ID:     ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -25,38 +26,49 @@ jobs:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       YOUTUBE_ENABLED: "true"
       YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'public' }}
+      VOICE:  ${{ vars.VOICE  || 'en-US-AndrewMultilingualNeural' }}
+      SHARPEN: ${{ vars.SHARPEN || '0.9' }}
+      GRAIN: ${{ vars.GRAIN || '6' }}
+      ZOOM_AMP: ${{ vars.ZOOM_AMP || '0.10' }}
+      APPROVAL_MODE: "true"
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Kutilayotgan video bormi?
+      - name: Ish bormi?
         id: chk
         run: |
-          n=$(ls state/pending/*.json 2>/dev/null | wc -l)
-          echo "count=$n" >> $GITHUB_OUTPUT
-          echo "Kutilmoqda: $n"
+          p=$(ls state/pending/*.json 2>/dev/null | wc -l)
+          h=$(ls state/handoff/*.json 2>/dev/null | wc -l)
+          echo "work=$((p + h))" >> $GITHUB_OUTPUT
+          echo "handoff=$h" >> $GITHUB_OUTPUT
+          echo "Tasdiq kutayotgan: $p | Sizning rasmlaringiz kutilayotgan: $h"
 
       - uses: actions/setup-python@v5
-        if: steps.chk.outputs.count != '0'
+        if: steps.chk.outputs.work != '0'
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Kutubxonalar
-        if: steps.chk.outputs.count != '0'
-        run: pip install -q requests python-dotenv google-api-python-client google-auth google-auth-oauthlib
+      - name: ffmpeg (faqat video yig'ish kerak bo'lsa)
+        if: steps.chk.outputs.handoff != '0'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
 
-      - name: Tugmalarni o'qish va yuklash
-        if: steps.chk.outputs.count != '0'
+      - name: Kutubxonalar
+        if: steps.chk.outputs.work != '0'
+        run: pip install -q -r requirements.txt
+
+      - name: Navbatni qayta ishlash
+        if: steps.chk.outputs.work != '0'
         run: python approve.py
 
       - name: Holatni repoga yozish
-        if: steps.chk.outputs.count != '0'
+        if: steps.chk.outputs.work != '0'
         run: |
           git config user.name  "shorts-bot"
           git config user.email "bot@users.noreply.github.com"
           git add -A state/ || true
-          git diff --cached --quiet || git commit -m "state: tasdiqlar qayta ishlandi"
+          git diff --cached --quiet || git commit -m "state: navbat qayta ishlandi"
           git pull --rebase --autostash origin ${{ github.ref_name }} || true
           git push

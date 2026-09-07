@@ -16,12 +16,23 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import config  # noqa: E402
-from agents import idea_agent, publish_agent, render_agent  # noqa: E402
+from agents import handoff, idea_agent, publish_agent, render_agent  # noqa: E402
 from core import state  # noqa: E402
 
 
 def one(publish: bool = True, scenes: int | None = None) -> dict:
     idea = idea_agent.run(scenes)
+
+    if config.HANDOFF:
+        work = config.OUTPUT_DIR / "handoff_tmp"
+        work.mkdir(parents=True, exist_ok=True)
+        decision = handoff.ask(idea, work)
+        if decision["mode"] == "mine":
+            state.add({"title": idea["youtube_title"], "topic": idea["topic"],
+                       "uid": decision["uid"], "status": "handoff"})
+            return {"idea": idea, "handoff": True, "uid": decision["uid"],
+                    "video": None, "dir": work, "duration": 0}
+
     assets = render_agent.run(idea)
     (assets["dir"] / "idea.json").write_text(
         json.dumps(idea, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -55,6 +66,9 @@ def _emit_ci_outputs(r: dict) -> None:
         return
     uid = r.get("uid", "")
     with open(gh_out, "a", encoding="utf-8") as f:
+        if r.get("handoff") or not r.get("video"):
+            f.write("uid=\n")
+            return
         f.write(f"uid={uid}\n")
         f.write(f"artifact=short-{uid}\n")
         f.write(f"dir={r['dir']}\n")
@@ -78,7 +92,10 @@ def main() -> None:
         print(f"\n{'=' * 46}\n  VIDEO {i + 1}/{a.count}\n{'=' * 46}")
         try:
             r = one(publish=not a.no_publish, scenes=a.scenes)
-            print(f"\n✅ {r['video']}")
+            if r.get("handoff"):
+                print("\n⏸ Sizning rasmlaringiz kutilmoqda (botga tashlang)")
+            else:
+                print(f"\n✅ {r['video']}")
             ok += 1
         except Exception:  # noqa: BLE001
             traceback.print_exc()

@@ -18,7 +18,9 @@ def _pick_music() -> Path | None:
     return random.choice(files) if files else None
 
 
-def run(idea: dict, workdir: Path | None = None) -> dict:
+def run(idea: dict, workdir: Path | None = None,
+        ready_images: list[Path] | None = None,
+        ready_clips: list[Path] | None = None) -> dict:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     slug = _slug(idea.get("slug") or idea["topic"])
     work = workdir or (config.OUTPUT_DIR / f"{stamp}_{slug}")
@@ -28,9 +30,19 @@ def run(idea: dict, workdir: Path | None = None) -> dict:
     img_paths, durs, audio_paths, all_words = [], [], [], []
     cursor = 0.0
 
+    if ready_clips:
+        scenes = scenes[:len(ready_clips)]
+
     for i, sc in enumerate(scenes):
-        print(f"[2] Sahna {i + 1}/{len(scenes)} — rasm...")
-        img = images.generate(sc["image_prompt"], work / f"img_{i:02d}.png")
+        if ready_clips and i < len(ready_clips):
+            img = ready_clips[i]          # klip — rasm generatsiyasi kerak emas
+            print(f"[2] Sahna {i + 1}/{len(scenes)} — tayyor klip: {img.name}")
+        elif ready_images and i < len(ready_images):
+            img = ready_images[i]
+            print(f"[2] Sahna {i + 1}/{len(scenes)} — tayyor rasm: {img.name}")
+        else:
+            print(f"[2] Sahna {i + 1}/{len(scenes)} — rasm...")
+            img = images.generate(sc, work / f"img_{i:02d}.png", idea.get("style_bible"))
 
         print(f"[2] Sahna {i + 1}/{len(scenes)} — ovoz...")
         mp3 = work / f"aud_{i:02d}.mp3"
@@ -60,7 +72,10 @@ def run(idea: dict, workdir: Path | None = None) -> dict:
 
     print("[2] Video yig'ilmoqda (ffmpeg)...")
     out = work / f"{slug}.mp4"
-    video.build(img_paths, durs, voice, ass, out, music=_pick_music())
+    if ready_clips:
+        video.build_from_clips(img_paths, durs, voice, ass, out, music=_pick_music())
+    else:
+        video.build(img_paths, durs, voice, ass, out, music=_pick_music())
     thumb = video.thumbnail(out, work / "thumb.jpg", at=min(1.0, durs[0] / 2))
 
     print(f"[2] Tayyor: {out}  ({sum(durs):.1f}s)")

@@ -96,6 +96,115 @@ def yt_creds() -> dict:
     return {k: v for k, v in out.items() if v}
 
 
+ASK = {
+    "GEMINI_API_KEY": (
+        "GEMINI API KALITI  (skript va zaxira rasm generatori uchun)",
+        "  Qayerdan: https://aistudio.google.com/apikey  ->  Create API key",
+        "  Ko'rinishi: AQ.Ab8... (yangi) yoki AIza... (eski)",
+        lambda v: (v.startswith("AQ.") or v.startswith("AIza")) and len(v) > 25,
+        "kalit 'AQ.' yoki 'AIza' bilan boshlanishi kerak",
+    ),
+    "TELEGRAM_BOT_TOKEN": (
+        "TELEGRAM BOT TOKENI",
+        "  Qayerdan: Telegramda @BotFather -> /newbot",
+        "  Ko'rinishi: 123456789:AAH...",
+        lambda v: ":" in v and v.split(":")[0].isdigit(),
+        "token 'raqamlar:harflar' ko'rinishida bo'lishi kerak",
+    ),
+    "TELEGRAM_CHAT_ID": (
+        "TELEGRAM KANAL / CHAT",
+        "  Kanal yarating -> botni ADMIN qiling -> kanal manzilini yozing.",
+        "  Ko'rinishi: @mening_kanalim   (yoki raqamli id: -1001234567890)",
+        lambda v: v.startswith("@") or v.lstrip("-").isdigit(),
+        "@ bilan boshlanishi yoki raqamli id bo'lishi kerak",
+    ),
+}
+
+
+def ask_missing(secrets: dict) -> dict:
+    """Yetishmayotgan kalitlarni so'raydi va .env ga saqlaydi."""
+    need = [k for k in ("GEMINI_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
+            if not secrets.get(k)]
+    if not need:
+        return secrets
+
+    print("\n" + "=" * 64)
+    print(f"  {len(need)} ta kalit yetishmayapti. Har birini joylab Enter bosing.")
+    print("  (o'tkazib yuborish uchun bo'sh qoldirib Enter)")
+    print("=" * 64)
+
+    for k in need:
+        title, where, shape, ok, hint = ASK[k]
+        while True:
+            print(f"\n--- {title}")
+            print(where)
+            print(shape)
+            v = input(f"{k} = ").strip()
+            if not v:
+                print("    o'tkazib yuborildi")
+                break
+            if ok(v):
+                secrets[k] = v
+                break
+            print(f"    ! {hint} — qayta urinib ko'ring")
+
+    save_env({k: v for k, v in secrets.items() if v})
+    return secrets
+
+
+def save_env(values: dict) -> None:
+    """.env dagi qatorlarni yangilaydi (qolganini tegmaydi)."""
+    env = ROOT / ".env"
+    lines = env.read_text(encoding="utf-8").splitlines() if env.exists() else []
+    for key, val in values.items():
+        found = False
+        for i, ln in enumerate(lines):
+            if ln.split("=", 1)[0].strip() == key:
+                lines[i] = f"{key}={val}"
+                found = True
+                break
+        if not found:
+            lines.append(f"{key}={val}")
+    env.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"\n   ✓ .env yangilandi")
+
+
+# Eskirgan qiymatlarni yangilash (model nomlari o'zgargan)
+MIGRATE = {
+    "TEXT_MODEL": {"gemini-3-flash": "gemini-3.5-flash",
+                   "gemini-3-flash-preview": "gemini-3.5-flash"},
+    "POLLI_MODEL": {"flux": "sana"},          # flux tekin rejadan olib tashlangan
+    "IMAGE_MODEL": {"gemini-3.1-flash-image-preview": "gemini-3.1-flash-image"},
+}
+
+
+def read_env() -> dict:
+    env = ROOT / ".env"
+    out = {}
+    if env.exists():
+        for ln in env.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if ln and not ln.startswith("#") and "=" in ln:
+                k, v = ln.split("=", 1)
+                out[k.strip()] = v.strip()
+    return out
+
+
+def migrate_env() -> dict:
+    """.env dagi eskirgan qiymatlarni almashtiradi va yangi holatni qaytaradi."""
+    cur = read_env()
+    fixed = {}
+    for key, table in MIGRATE.items():
+        v = cur.get(key, "")
+        if v in table:
+            fixed[key] = table[v]
+            print(f"    ↻ {key}: {v} -> {table[v]}")
+    if fixed:
+        save_env(fixed)
+        cur.update(fixed)
+    return cur
+
+
 # ---------------- asosiy ----------------
 def main() -> None:
     repo_name = sys.argv[1] if len(sys.argv) > 1 else "shorts-factory"
@@ -113,6 +222,7 @@ def main() -> None:
     if not token:
         raise SystemExit("❌ Token kerak")
     print(f"   token: {len(token)} belgi, {token[:8]}…{token[-4:]}")
+    save_env({"GITHUB_TOKEN": token})
 
     try:
         import nacl  # noqa: F401
@@ -131,12 +241,7 @@ def main() -> None:
         "TELEGRAM_CHAT_ID": config.TELEGRAM_CHAT_ID,
         **yt_creds(),
     }
-    missing = [k for k, v in secrets.items() if not v]
-    if missing:
-        print(f"⚠️  Bo'sh: {', '.join(missing)}")
-        print("   (.env ni to'ldiring / `python youtube_auth.py` ni bajaring)")
-        if os.getenv("SF_AUTO") != "1" and input("   Baribir davom etamizmi? [y/N] ").strip().lower() != "y":
-            return
+    secrets = ask_missing(secrets)
 
     # 1. repo
     print("\n▶ Repo…")
@@ -182,9 +287,19 @@ def main() -> None:
 
     # 4. variables
     print("\n▶ Variables…")
-    for k, v in [("NICHE", config.NICHE), ("VOICE", config.VOICE),
-                 ("SCENES", str(config.SCENES)), ("YOUTUBE_PRIVACY", config.YOUTUBE_PRIVACY),
-                 ("IMAGE_PROVIDER", config.IMAGE_PROVIDER), ("POLLI_MODEL", config.POLLI_MODEL)]:
+    env = migrate_env()
+
+    def val(key, fallback):
+        return env.get(key) or fallback
+
+    for k, v in [("NICHE", val("NICHE", config.NICHE)),
+                 ("VOICE", val("VOICE", config.VOICE)),
+                 ("SCENES", val("SCENES", str(config.SCENES))),
+                 ("YOUTUBE_PRIVACY", val("YOUTUBE_PRIVACY", config.YOUTUBE_PRIVACY)),
+                 ("IMAGE_PROVIDER", val("IMAGE_PROVIDER", config.IMAGE_PROVIDER)),
+                 ("POLLI_MODEL", val("POLLI_MODEL", "sana")),
+                 ("TEXT_MODEL", val("TEXT_MODEL", "gemini-3.5-flash")),
+                 ("HANDOFF_WAIT", val("HANDOFF_WAIT", str(config.HANDOFF_WAIT)))]:
         try:
             api("POST", f"/repos/{full}/actions/variables", token, {"name": k, "value": v})
         except RuntimeError:

@@ -13,14 +13,21 @@ def _b(key: str, default: str = "false") -> bool:
 
 # --- Google ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-TEXT_MODEL = os.getenv("TEXT_MODEL", "gemini-3-flash")
-IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gemini-3.1-flash-image")
+TEXT_MODEL = os.getenv("TEXT_MODEL", "gemini-3.5-flash")
+IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gemini-3.1-flash-image")  # Nano Banana 2
 IMAGE_MODEL_FALLBACK = os.getenv("IMAGE_MODEL_FALLBACK", "gemini-2.5-flash-image")
 
 # --- Rasm provayderi ---
 # pollinations = tekin, kalitsiz (FLUX) | gemini = Nano Banana, sifatliroq, pullik
 IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "pollinations").strip().lower()
-POLLI_MODEL = os.getenv("POLLI_MODEL", "flux")
+POLLI_MODEL = os.getenv("POLLI_MODEL", "sana")
+IMAGE_SIZE = os.getenv("IMAGE_SIZE", "2K")   # 1K | 2K | 4K (faqat gemini)
+
+# --- Rasm sifatini oshirish (past o'lchamli tekin rasmlar uchun) ---
+SHARPEN = float(os.getenv("SHARPEN", "0.9"))      # 0 = o'chirilgan
+GRAIN = float(os.getenv("GRAIN", "6"))            # kino donadorligi, 0 = yo'q
+VIGNETTE = _b("VIGNETTE", "true")
+ZOOM_AMP = float(os.getenv("ZOOM_AMP", "0.10"))   # Ken Burns kuchi
 
 # --- Telegram ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -40,6 +47,11 @@ YT_REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN", "")
 # true bo'lsa: video Telegramga tugmalar bilan boradi, YouTube'ga faqat
 # siz "✅ Yukla" ni bosgandan keyin chiqadi.
 APPROVAL_MODE = _b("APPROVAL_MODE", "true")
+
+# Promt tayyor bo'lgach botga yuborib, qaror kutish.
+# Bu vaqt ichida "O'zim yasayman" bosilmasa — avtomat davom etadi.
+HANDOFF = _b("HANDOFF", "true")
+HANDOFF_WAIT = int(os.getenv("HANDOFF_WAIT", "120"))   # soniya
 
 # --- Kontent ---
 NICHE = os.getenv("NICHE", "mind-blowing history and science facts")
